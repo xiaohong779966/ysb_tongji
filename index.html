@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026年中秋、国庆值班安排</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #f4f6f9;
+    color: #1f2937;
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .sub { color: #6b7280; font-size: 13px; margin: 0 0 18px; }
+  .sub a { color: #2563eb; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 14px;
+    border: 1px solid #d3dae3;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+  }
+  button:hover { border-color: #9db4d0; background: #f8fbff; }
+  button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+  button.primary:hover { background: #1d4ed8; }
+  button.danger:hover { border-color: #ef4444; color: #dc2626; background: #fff5f5; }
+
+  .group {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e8edf3;
+  }
+  .group-head h2 { font-size: 16px; margin: 0; }
+  .group-head .range { color: #6b7280; font-size: 13px; }
+  .group-head .cnt { color: #2563eb; font-weight: 600; }
+
+  .day {
+    display: grid;
+    grid-template-columns: 168px 1fr;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid #f0f3f7;
+    align-items: start;
+  }
+  .day:last-child { border-bottom: 0; }
+  .day-date { font-weight: 600; }
+  .day-week { color: #6b7280; font-weight: 400; margin-left: 6px; }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 0 7px;
+    border-radius: 5px;
+    background: #eef4ff;
+    color: #2563eb;
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .badge.short { background: #f1f5f9; color: #64748b; }
+
+  .slot-line { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 32px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #eaf1fd;
+    color: #1e40af;
+    border-radius: 999px;
+    padding: 3px 6px 3px 12px;
+    font-size: 13px;
+  }
+  .chip button {
+    border: 0;
+    background: transparent;
+    color: #7c93b8;
+    padding: 0 4px;
+    font-size: 15px;
+    line-height: 1;
+    border-radius: 999px;
+  }
+  .chip button:hover { color: #dc2626; background: #fff; }
+  .empty-tip { color: #9aa5b1; font-size: 13px; }
+  .slot-full .empty-tip { color: #dc2626; }
+
+  .add { display: inline-flex; gap: 6px; align-items: center; }
+  .add input {
+    font-family: inherit;
+    font-size: 13px;
+    width: 108px;
+    padding: 5px 10px;
+    border: 1px solid #d3dae3;
+    border-radius: 8px;
+    outline: none;
+  }
+  .add input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+  .add button { padding: 5px 11px; }
+  .count { font-size: 12px; color: #6b7280; }
+  .count.full { color: #dc2626; font-weight: 600; }
+
+  h2.sec { font-size: 16px; margin: 30px 0 12px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(16, 24, 40, .08); }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #f0f3f7; font-size: 13px; }
+  th { background: #f8fafc; color: #4b5563; font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  td.days { font-weight: 600; color: #2563eb; white-space: nowrap; }
+  td.dates { color: #6b7280; }
+  .stat-empty { padding: 22px 14px; text-align: center; color: #9aa5b1; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(16, 24, 40, .08); }
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 34px;
+    transform: translate(-50%, 12px);
+    background: #111827;
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s, transform .18s;
+  }
+  #toast.show { opacity: .93; transform: translate(-50%, 0); }
+
+  @media (max-width: 640px) {
+    .day { grid-template-columns: 1fr; gap: 8px; }
+    .wrap { padding: 16px 12px 50px; }
+    .day-date { font-size: 15px; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar, .add, .chip button, #toast, .sub a { display: none !important; }
+    .wrap { max-width: none; padding: 0; }
+    .group, table, .stat-empty { box-shadow: none; border: 1px solid #e5e7eb; }
+    .group { page-break-inside: avoid; }
+    .day { padding: 8px 14px; }
+    .chip { border: 1px solid #dbe3ec; background: #fff; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>2026年中秋、国庆值班安排</h1>
+  <p class="sub">
+    值班日期依据《国务院办公厅关于2026年部分节假日安排的通知》（国办发明电〔2025〕7号）：
+    中秋节 9月25日—27日，国庆节 10月1日—7日。<br>
+    每天最多安排 <strong>3</strong> 人，数据保存在本机浏览器中。
+  </p>
+
+  <div class="toolbar">
+    <button class="primary" onclick="exportCsv()">导出表格（Excel）</button>
+    <button onclick="window.print()">打印 / 存为PDF</button>
+    <button onclick="backup()">备份数据</button>
+    <button onclick="document.getElementById('restoreFile').click()">恢复备份</button>
+    <button class="danger" onclick="clearAll()">清空全部</button>
+    <input type="file" id="restoreFile" accept=".json,application/json" style="display:none" onchange="restore(this)">
+  </div>
+
+  <main id="groups"></main>
+
+  <h2 class="sec">人员值班天数统计</h2>
+  <div id="stats"></div>
+
+</div>
+
+<div id="toast"></div>
+<datalist id="nameList"></datalist>
+
+<script>
+/* ===== 1. 值班日期配置（如需增删日期，只改这里） ===== */
+var GROUPS = [
+  {
+    name: '中秋节',
+    range: '9月25日 — 9月27日，共3天',
+    days: [
+      { date: '2026-09-25', text: '9月25日', week: '周五', tag: '法定假日' },
+      { date: '2026-09-26', text: '9月26日', week: '周六' },
+      { date: '2026-09-27', text: '9月27日', week: '周日' }
+    ]
+  },
+  {
+    name: '国庆节',
+    range: '10月1日 — 10月7日，共7天',
+    days: [
+      { date: '2026-10-01', text: '10月1日', week: '周四', tag: '法定假日' },
+      { date: '2026-10-02', text: '10月2日', week: '周五', tag: '法定假日' },
+      { date: '2026-10-03', text: '10月3日', week: '周六', tag: '法定假日' },
+      { date: '2026-10-04', text: '10月4日', week: '周日' },
+      { date: '2026-10-05', text: '10月5日', week: '周一' },
+      { date: '2026-10-06', text: '10月6日', week: '周二' },
+      { date: '2026-10-07', text: '10月7日', week: '周三' }
+    ]
+  }
+];
+
+var MAX_PER_DAY = 3;                 /* 每天人数上限 */
+var STORE_KEY = 'duty-2026-zhongqiu-guooing';
+
+/* ===== 2. 数据读写 ===== */
+function allDays() {
+  var out = [];
+  GROUPS.forEach(function (g) {
+    (g.days || []).forEach(function (d) { out.push({ group: g.name, day: d }); });
+  });
+  return out;
+}
+
+function load() {
+  var raw = null;
+  try { raw = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch (e) { raw = {}; }
+  var data = {};
+  allDays().forEach(function (item) {
+    var v = raw[item.day.date];
+    data[item.day.date] = Array.isArray(v) ? v.filter(function (n) { return typeof n === 'string' && n.trim(); }).slice(0, MAX_PER_DAY) : [];
+  });
+  return data;
+}
+
+var data = load();
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { /* 隐私模式等，忽略 */ }
+}
+
+/* ===== 3. 渲染 ===== */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function render() {
+  var html = '';
+  GROUPS.forEach(function (g, gi) {
+    var used = 0, cap = g.days.length * MAX_PER_DAY;
+    g.days.forEach(function (d) { used += (data[d.date] || []).length; });
+
+    html += '<section class="group">';
+    html += '<div class="group-head"><h2>' + esc(g.name) + '</h2>' +
+            '<div class="range">' + esc(g.range) + '｜已排 <span class="cnt">' + used + '/' + cap + '</span> 班次</div></div>';
+
+    g.days.forEach(function (d) {
+      var list = data[d.date] || [];
+      var full = list.length >= MAX_PER_DAY;
+
+      html += '<div class="day' + (full ? ' slot-full' : '') + '">';
+      html += '<div class="day-meta"><div class="day-date">' + esc(d.text) +
+              '<span class="day-week">' + esc(d.week) + '</span>' +
+              (d.tag ? '<span class="badge">' + esc(d.tag) + '</span>' : '') +
+              '</div></div>';
+
+      html += '<div><div class="slot-line">';
+      if (list.length === 0) {
+        html += '<span class="empty-tip">暂未安排</span>';
+      } else {
+        list.forEach(function (n) {
+          html += '<span class="chip">' + esc(n) +
+                  '<button type="button" title="删除" onclick="removePerson(\'' + d.date + '\',' + esc(JSON.stringify(n)) + ')">&times;</button></span>';
+        });
+      }
+      if (full) {
+        html += '<span class="count full">已满3人</span>';
+      } else {
+        html += '<span class="add">' +
+                '<input type="text" list="nameList" maxlength="20" placeholder="输入姓名" ' +
+                'onkeydown="if(event.key===\'Enter\'){addPerson(\'' + d.date + '\',this)}">' +
+                '<button type="button" onclick="addPerson(\'' + d.date + '\',this.previousElementSibling)">添加</button></span>' +
+                '<span class="count">' + list.length + '/' + MAX_PER_DAY + ' 人</span>';
+      }
+      html += '</div></div>';
+      html += '</div>';
+    });
+
+    html += '</section>';
+  });
+
+  document.getElementById('groups').innerHTML = html;
+  renderStats();
+  renderNameList();
+}
+
+function renderStats() {
+  var map = {};   /* 姓名 -> 日期数组 */
+  allDays().forEach(function (item) {
+    (data[item.day.date] || []).forEach(function (n) {
+      (map[n] = map[n] || []).push(item.day.text);
+    });
+  });
+
+  var names = Object.keys(map).sort(function (a, b) {
+    return map[b].length - map[a].length || a.localeCompare(b, 'zh');
+  });
+
+  var box = document.getElementById('stats');
+  if (names.length === 0) {
+    box.innerHTML = '<div class="stat-empty">还没有安排值班人员</div>';
+    return;
+  }
+
+  var html = '<table><thead><tr><th style="width:120px">姓名</th><th style="width:90px">值班天数</th><th>值班日期</th></tr></thead><tbody>';
+  names.forEach(function (n) {
+    html += '<tr><td>' + esc(n) + '</td><td class="days">' + map[n].length + ' 天</td>' +
+            '<td class="dates">' + esc(map[n].join('、')) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  box.innerHTML = html;
+}
+
+function renderNameList() {
+  var set = {};
+  allDays().forEach(function (item) {
+    (data[item.day.date] || []).forEach(function (n) { set[n] = 1; });
+  });
+  document.getElementById('nameList').innerHTML = Object.keys(set)
+    .map(function (n) { return '<option value="' + esc(n) + '"></option>'; }).join('');
+}
+
+/* ===== 4. 操作 ===== */
+function addPerson(date, input) {
+  var name = (input.value || '').trim().replace(/\s+/g, '');
+  if (!name) { toast('请先输入姓名'); input.focus(); return; }
+
+  var list = data[date] || (data[date] = []);
+  if (list.length >= MAX_PER_DAY) { toast('当天已满3人，不能再添加'); return; }
+  if (list.indexOf(name) >= 0) { toast('“' + name + '”当天已经排过班了'); input.select(); return; }
+
+  list.push(name);
+  input.value = '';
+  save(); render();
+  toast('已添加：' + name);
+}
+
+function removePerson(date, name) {
+  var list = data[date] || [];
+  var i = list.indexOf(name);
+  if (i < 0) return;
+  if (!confirm('确定删除「' + date + '」的 ' + name + ' 吗？')) return;
+  list.splice(i, 1);
+  save(); render();
+  toast('已删除：' + name);
+}
+
+function clearAll() {
+  if (!confirm('确定清空全部值班安排吗？此操作不可撤销，建议先“备份数据”。')) return;
+  data = {};
+  save(); render();
+  toast('已清空');
+}
+
+/* ===== 5. 导出 / 备份 ===== */
+function download(filename, text, type) {
+  var blob = new Blob([text], { type: type || 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+function exportCsv() {
+  var quote = function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; };
+  var lines = [['节日', '日期', '星期', '值班人员1', '值班人员2', '值班人员3', '人数'].map(quote).join(',')];
+  allDays().forEach(function (item) {
+    var list = data[item.day.date] || [];
+    var row = [item.group, item.day.text, item.day.week];
+    for (var i = 0; i < MAX_PER_DAY; i++) row.push(list[i] || '');
+    row.push(list.length);
+    lines.push(row.map(quote).join(','));
+  });
+  download('2026年中秋国庆值班安排.csv', '\ufeff' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+  toast('已导出，可用 Excel 打开');
+}
+
+function backup() {
+  download('值班安排备份-' + new Date().toISOString().slice(0, 10) + '.json',
+           JSON.stringify({ version: 1, savedAt: new Date().toISOString(), data: data }, null, 2),
+           'application/json;charset=utf-8');
+  toast('备份文件已下载');
+}
+
+function restore(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function () {
+    try {
+      var obj = JSON.parse(reader.result);
+      var incoming = (obj && typeof obj === 'object' && obj.data) ? obj.data : obj;
+      if (!incoming || typeof incoming !== 'object') throw new Error('格式不正确');
+
+      var next = {}, count = 0;
+      allDays().forEach(function (item) {
+        var v = incoming[item.day.date];
+        next[item.day.date] = Array.isArray(v)
+          ? v.filter(function (n) { return typeof n === 'string' && n.trim(); }).slice(0, MAX_PER_DAY)
+          : [];
+        count += next[item.day.date].length;
+      });
+
+      if (!confirm('导入后将覆盖当前安排（导入 ' + count + ' 个班次），确定继续吗？')) return;
+      data = next;
+      save(); render();
+      toast('导入成功');
+    } catch (e) {
+      alert('备份文件读取失败：' + e.message);
+    } finally {
+      input.value = '';
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+/* ===== 6. 小提示 ===== */
+var toastTimer = null;
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.classList.remove('show'); }, 1800);
+}
+
+render();
+</script>
+</body>
+</html>
