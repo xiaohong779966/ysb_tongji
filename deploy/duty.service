@@ -1,0 +1,27 @@
+# 不用 Docker 时，直接把服务交给 systemd 托管
+# 放到 /etc/systemd/system/duty.service，然后：
+#   systemctl daemon-reload && systemctl enable --now duty
+
+[Unit]
+Description=2026年中秋国庆值班报名系统
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/duty
+ExecStart=/usr/bin/node /opt/duty/server.js
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=127.0.0.1
+Environment=DATA_DIR=/opt/duty/data
+Environment=TZ=Asia/Shanghai
+# 管理密码建议写在这里，或在 /etc/duty.env 中配置后用 EnvironmentFile 引入
+Environment=ADMIN_PASSWORD=请改成你自己的管理密码
+# Environment=ACCESS_CODE=单位邀请码
+Environment=TRUST_PROXY=1
+Restart=always
+RestartSec=3
+User=www-data
+
+[Install]
+WantedBy=multi-user.target

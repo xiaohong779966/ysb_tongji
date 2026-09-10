@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>值班报名</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: #f2f5f9; color: #1f2937; font-size: 14px; line-height: 1.6;
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+    padding-bottom: 40px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 14px; }
+
+  header { background: linear-gradient(135deg, #1d4ed8, #2563eb 55%, #3b82f6); color: #fff; padding: 22px 0 20px; }
+  header h1 { margin: 0; font-size: 19px; font-weight: 600; }
+  header p { margin: 6px 0 0; font-size: 13px; opacity: .9; }
+  .head-stat { margin-top: 12px; display: flex; gap: 18px; font-size: 13px; }
+  .head-stat b { font-size: 17px; font-weight: 600; }
+
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(16, 24, 40, .07); margin-top: 14px; overflow: hidden; }
+  .card-body { padding: 14px; }
+
+  .field { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { width: 62px; flex: none; color: #4b5563; font-size: 13px; }
+  .field label i { color: #dc2626; font-style: normal; }
+  .field input {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 14px; padding: 9px 12px;
+    border: 1px solid #d8dee7; border-radius: 9px; outline: none; background: #fff;
+  }
+  .field input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+  .hint { color: #94a3b8; font-size: 12px; margin: 8px 0 0 72px; }
+
+  #banner { position: sticky; top: 0; z-index: 30; margin: 0 0 10px; display: none; }
+  #banner.show { display: block; }
+  #banner .inner {
+    border-radius: 10px; padding: 11px 14px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .12);
+  }
+  #banner.err .inner { background: #fee2e2; color: #b91c1c; border-left: 4px solid #dc2626; }
+  #banner.warn .inner { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
+  #banner.ok .inner { background: #dcfce7; color: #166534; border-left: 4px solid #16a34a; }
+
+  .group-title { display: flex; align-items: baseline; gap: 10px; margin: 22px 4px 2px; }
+  .group-title h2 { font-size: 16px; margin: 0; }
+  .group-title span { color: #6b7280; font-size: 13px; }
+
+  .day-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+  .day-title { font-weight: 600; font-size: 15px; }
+  .day-title em { font-style: normal; color: #6b7280; font-weight: 400; font-size: 13px; margin-left: 6px; }
+  .tag { display: inline-block; font-size: 12px; padding: 0 7px; border-radius: 5px; background: #eef4ff; color: #2563eb; margin-left: 6px; }
+  .day-count { font-size: 13px; color: #6b7280; white-space: nowrap; }
+  .day-count.full { color: #dc2626; font-weight: 600; }
+
+  .shift { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid #f8fafc; }
+  .shift:last-child { border-bottom: 0; }
+  .shift-name { width: 74px; flex: none; font-size: 13px; }
+  .shift-name b { font-weight: 600; }
+  .shift-name small { display: block; color: #94a3b8; font-size: 12px; }
+  .shift-people { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .person { background: #eef4ff; color: #1e40af; border-radius: 999px; padding: 2px 11px; font-size: 13px; white-space: nowrap; }
+  .person.mine { background: #dcfce7; color: #15803d; font-weight: 600; }
+  .vacant { color: #cbd5e1; font-size: 13px; }
+  .shift .btn { flex: none; }
+
+  .btn {
+    font-family: inherit; font-size: 13px; padding: 7px 14px; border-radius: 9px;
+    border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { background: #1d4ed8; }
+  .btn:disabled { background: #f1f5f9; border-color: #e2e8f0; color: #a8b3c2; cursor: not-allowed; }
+  .btn.ghost { background: #fff; color: #374151; border-color: #d8dee7; }
+  .btn.ghost:hover { background: #f8fafc; }
+  .btn.sm { padding: 5px 11px; font-size: 12px; }
+  .btn.danger { background: #fff; border-color: #fca5a5; color: #dc2626; }
+  .btn.danger:hover { background: #fef2f2; }
+
+  .full-tip { flex: none; font-size: 12px; color: #dc2626; }
+
+  #mine { display: none; }
+  #mine.show { display: block; }
+  .mine-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #f8fafc; gap: 10px; }
+  .mine-row:last-child { border-bottom: 0; }
+  .empty { padding: 20px 14px; text-align: center; color: #9aa5b1; font-size: 13px; }
+
+  footer { text-align: center; color: #a6b0bd; font-size: 12px; margin-top: 26px; line-height: 1.8; }
+
+  #gate { position: fixed; inset: 0; background: #f2f5f9; z-index: 60; display: none; align-items: center; justify-content: center; padding: 20px; }
+  #gate.show { display: flex; }
+  #gate .box { background: #fff; border-radius: 14px; padding: 24px; width: 100%; max-width: 340px; box-shadow: 0 8px 30px rgba(15, 23, 42, .12); }
+  #gate h2 { margin: 0 0 6px; font-size: 17px; }
+  #gate p { margin: 0 0 16px; color: #6b7280; font-size: 13px; }
+  #gate input { width: 100%; font-family: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid #d8dee7; border-radius: 9px; outline: none; }
+  #gate button { width: 100%; margin-top: 12px; padding: 11px; }
+
+  @media (max-width: 480px) {
+    header h1 { font-size: 17px; }
+    .field label { width: 54px; }
+    .hint { margin-left: 64px; }
+    .shift { flex-wrap: wrap; }
+    .shift-name { width: 62px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1 id="title">2026年中秋、国庆值班报名</h1>
+    <p>每天 3 人：中班 2 人、晚班 1 人；同一人同一天只能报一个班次</p>
+    <div class="head-stat">
+      <div>已报名 <b id="stat-total">-</b> 班次</div>
+      <div>剩余 <b id="stat-left">-</b> 个名额</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="banner"><div class="inner"></div></div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="field"><label>姓名 <i>*</i></label><input id="name" maxlength="20" placeholder="请输入本人姓名" autocomplete="off"></div>
+      <div class="field"><label>科室</label><input id="dept" maxlength="30" placeholder="选填，如：办公室" autocomplete="off"></div>
+      <div class="field"><label>手机号 <i>*</i></label><input id="phone" maxlength="11" inputmode="numeric" placeholder="11 位手机号，用于核对与联系" autocomplete="off"></div>
+      <p class="hint">先填好以上信息，再点击下方日期对应的「报名」按钮。信息只保存在你自己的浏览器里。</p>
+    </div>
+  </div>
+
+  <div id="days"></div>
+
+  <div class="card" id="mine">
+    <div class="day-head"><span class="day-title">我的报名</span>
+      <button class="btn ghost sm" onclick="queryMine()">刷新</button></div>
+    <div id="mine-body"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <button class="btn ghost" onclick="queryMine()">查询我的报名 / 取消报名</button>
+    </div>
+  </div>
+
+  <footer>
+    值班日期依据《国务院办公厅关于2026年部分节假日安排的通知》（国办发明电〔2025〕7号）<br>
+    页面每 60 秒自动刷新一次，也可下拉刷新查看最新报名情况
+  </footer>
+</div>
+
+<div id="gate">
+  <div class="box">
+    <h2>请输入邀请码</h2>
+    <p>本页面需要单位发放的邀请码才能查看和报名。</p>
+    <input id="gate-code" placeholder="邀请码" autocomplete="off">
+    <button class="btn" onclick="submitCode()">进入</button>
+  </div>
+</div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var LS = {
+  get: function (k) { try { return localStorage.getItem('duty.' + k) || ''; } catch (e) { return ''; } },
+  set: function (k, v) { try { localStorage.setItem('duty.' + k, v); } catch (e) { } }
+};
+
+var board = null;
+var bannerTimer = null;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function say(type, msg) {
+  var b = $('banner');
+  b.className = 'show ' + type;
+  b.firstElementChild.textContent = msg;
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(function () { b.className = ''; }, 6000);
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
+}
+
+function headers() {
+  var h = { 'Content-Type': 'application/json' };
+  var code = LS.get('code');
+  if (code) h['x-access-code'] = code;
+  return h;
+}
+
+async function api(url, body) {
+  var opt = { method: body ? 'POST' : 'GET', headers: headers() };
+  if (body) opt.body = JSON.stringify(body);
+  var res = await fetch(url, opt);
+  var data = {};
+  try { data = await res.json(); } catch (e) { }
+  if (res.status === 401 && data.code === 'NEED_CODE') { $('gate').className = 'show'; throw new Error('__gate__'); }
+  return { ok: res.ok, status: res.status, data: data };
+}
+
+function submitCode() {
+  var v = $('gate-code').value.trim();
+  if (!v) return;
+  LS.set('code', v);
+  $('gate').className = '';
+  load();
+}
+
+function profile() {
+  return { name: $('name').value.trim(), dept: $('dept').value.trim(), phone: $('phone').value.trim() };
+}
+
+function remember() {
+  var p = profile();
+  LS.set('name', p.name); LS.set('dept', p.dept); LS.set('phone', p.phone);
+}
+
+/* ============ 渲染 ============ */
+
+function render() {
+  if (!board) return;
+  var me = profile().name;
+  var total = 0, capacity = 0, html = '';
+
+  board.groups.forEach(function (g) {
+    html += '<div class="group-title"><h2>' + esc(g.name) + '</h2><span>共 ' + g.days.length + ' 天</span></div>';
+    g.days.forEach(function (d) {
+      var cell = board.board[d.date] || {};
+      var used = cell.total || 0;
+      var cap = board.totalLimit;
+      var dateFull = used >= cap;
+      total += used; capacity += cap;
+
+      html += '<div class="card day">';
+      html += '<div class="day-head"><div class="day-title">' + esc(d.text) + '<em>' + esc(d.week) + '</em>' +
+              (d.tag ? '<span class="tag">' + esc(d.tag) + '</span>' : '') + '</div>' +
+              '<div class="day-count' + (dateFull ? ' full' : '') + '">' + (dateFull ? '已满 ' : '已报名 ') + used + '/' + cap + '</div></div>';
+
+      board.shifts.forEach(function (s) {
+        var list = cell[s.key] || [];
+        var full = list.length >= s.limit;
+        var action;
+
+        if (dateFull) action = '<span class="full-tip">该日期报名人数已满，请选择其他日期</span>';
+        else if (full) action = '<span class="full-tip">该班次报名人数已满，请选择其他班次</span>';
+        else action = '<button class="btn" onclick="signup(\'' + d.date + '\',\'' + s.key + '\')">报名</button>';
+
+        html += '<div class="shift">' +
+                '<div class="shift-name"><b>' + esc(s.key) + '</b><small>' + list.length + '/' + s.limit + ' 人</small></div>' +
+                '<div class="shift-people">';
+        for (var i = 0; i < s.limit; i++) {
+          if (list[i]) html += '<span class="person' + (me && list[i].name === me ? ' mine' : '') + '">' + esc(list[i].name) + '</span>';
+          else html += '<span class="vacant">空缺</span>';
+        }
+        html += '</div>' + action + '</div>';
+      });
+
+      html += '</div>';
+    });
+  });
+
+  $('days').innerHTML = html;
+  $('stat-total').textContent = total;
+  $('stat-left').textContent = capacity - total;
+}
+
+async function load() {
+  try {
+    var r = await api('/api/board');
+    if (!r.ok) { if (r.status !== 401) say('err', r.data.message || '加载失败'); return; }
+    board = r.data;
+    $('title').textContent = board.title || '值班报名';
+    document.title = board.title || '值班报名';
+    render();
+  } catch (e) { /* 邀请码未通过时静默 */ }
+}
+
+/* ============ 操作 ============ */
+
+async function signup(date, shift) {
+  var p = profile();
+  if (!p.name) { say('warn', '请先在上方填写姓名'); $('name').focus(); return; }
+  if (!/^1[3-9]\d{9}$/.test(p.phone)) { say('warn', '请填写正确的 11 位手机号'); $('phone').focus(); return; }
+  remember();
+
+  var r = await api('/api/signup', { date: date, shift: shift, name: p.name, dept: p.dept, phone: p.phone });
+  if (r.ok && r.data.ok) {
+    say('ok', r.data.message + '，请按时到岗。');
+    await load();
+    queryMine();
+  } else {
+    var full = r.data.code === 'SHIFT_FULL' || r.data.code === 'DATE_FULL';
+    say(full ? 'warn' : 'err', r.data.message || '报名失败');
+    if (full) await load();
+  }
+}
+
+async function queryMine() {
+  var p = profile();
+  if (!p.name || !/^1[3-9]\d{9}$/.test(p.phone)) { say('warn', '查询需要填写姓名和报名时用的手机号'); return; }
+  var r = await api('/api/my', { name: p.name, phone: p.phone });
+  if (!r.ok) { say('err', r.data.message || '查询失败'); return; }
+  var list = r.data.list || [];
+  $('mine').className = 'card show';
+  $('mine-body').innerHTML = list.length
+    ? list.map(function (m) {
+        return '<div class="mine-row"><div>' + esc(m.text) + ' <em style="font-style:normal;color:#6b7280;font-size:13px">' + esc(m.week) + '</em> · <b>' + esc(m.shift) + '</b></div>' +
+               '<button class="btn danger sm" onclick="cancelMine(' + m.id + ')">取消报名</button></div>';
+      }).join('')
+    : '<div class="empty">你还没有报名记录</div>';
+}
+
+async function cancelMine(id) {
+  var p = profile();
+  if (!confirm('确定取消这条报名吗？取消后名额会释放给其他人。')) return;
+  var r = await api('/api/cancel', { id: id, name: p.name, phone: p.phone });
+  if (r.ok && r.data.ok) { say('ok', r.data.message); await load(); queryMine(); }
+  else say('err', r.data.message || '取消失败');
+}
+
+/* ============ 启动 ============ */
+
+$('name').value = LS.get('name');
+$('dept').value = LS.get('dept');
+$('phone').value = LS.get('phone');
+['name', 'dept', 'phone'].forEach(function (k) {
+  $(k).addEventListener('change', function () { remember(); render(); });
+});
+
+load();
+setInterval(function () { if ($('gate').className.indexOf('show') < 0) load(); }, 60000);
+</script>
+</body>
+</html>

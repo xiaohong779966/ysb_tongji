@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>值班报名管理后台</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f2f5f9; color: #1f2937; font-size: 14px; line-height: 1.6;
+    font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  h1 { font-size: 20px; margin: 0; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .topbar .sub { color: #6b7280; font-size: 13px; }
+
+  .btn { font-family: inherit; font-size: 13px; padding: 7px 14px; border-radius: 9px;
+    border: 1px solid #d8dee7; background: #fff; color: #374151; cursor: pointer; }
+  .btn:hover { background: #f8fafc; }
+  .btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .btn.primary:hover { background: #1d4ed8; }
+  .btn.danger { border-color: #fca5a5; color: #dc2626; }
+  .btn.danger:hover { background: #fef2f2; }
+  .btn.sm { padding: 4px 10px; font-size: 12px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .stat { background: #fff; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(16, 24, 40, .07); }
+  .stat .k { color: #6b7280; font-size: 12px; }
+  .stat .v { font-size: 22px; font-weight: 600; color: #2563eb; margin-top: 2px; }
+  .stat .v.warn { color: #dc2626; }
+
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(16, 24, 40, .07); margin-bottom: 18px; overflow: hidden; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #eef2f7; flex-wrap: wrap; }
+  .card-head h2 { font-size: 15px; margin: 0; }
+  .card-head .tools { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid #f2f5f9; font-size: 13px; vertical-align: middle; }
+  th { background: #f8fafc; color: #4b5563; font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.date { font-weight: 600; white-space: nowrap; }
+  td .week { color: #9aa5b1; font-weight: 400; font-size: 12px; margin-left: 4px; }
+  .tag { display: inline-block; font-size: 12px; padding: 0 6px; border-radius: 5px; background: #eef4ff; color: #2563eb; margin-left: 5px; }
+  .person { display: inline-block; background: #eef4ff; color: #1e40af; border-radius: 999px; padding: 1px 10px; margin: 2px 4px 2px 0; font-size: 12px; }
+  .person.empty { background: #f8fafc; color: #cbd5e1; }
+  .person .del { color: #93a7c4; cursor: pointer; margin-left: 5px; font-weight: 700; }
+  .person .del:hover { color: #dc2626; }
+  .muted { color: #9aa5b1; font-size: 12px; }
+  td.num { font-weight: 600; }
+  .full-row td { background: #fffafa; }
+
+  .empty { padding: 26px 16px; text-align: center; color: #9aa5b1; }
+  .flash { border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-bottom: 14px; display: none; }
+  .flash.show { display: block; }
+  .flash.ok { background: #dcfce7; color: #166534; }
+  .flash.err { background: #fee2e2; color: #b91c1c; }
+  .flash.warn { background: #fef3c7; color: #92400e; }
+
+  #login { position: fixed; inset: 0; background: #f2f5f9; display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  #login.show { display: flex; }
+  #login .box { background: #fff; border-radius: 14px; padding: 26px; width: 100%; max-width: 350px; box-shadow: 0 8px 30px rgba(15, 23, 42, .12); }
+  #login h2 { margin: 0 0 6px; font-size: 18px; }
+  #login p { margin: 0 0 16px; color: #6b7280; font-size: 13px; }
+  #login input { width: 100%; font-family: inherit; font-size: 15px; padding: 10px 12px; border: 1px solid #d8dee7; border-radius: 9px; outline: none; }
+  #login input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+  #login button { width: 100%; margin-top: 12px; padding: 11px; }
+  #login .err { color: #dc2626; font-size: 13px; margin-top: 10px; display: none; }
+  #login .err.show { display: block; }
+
+  #app { display: none; }
+  #app.show { display: block; }
+
+  .addform { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding: 14px 16px; }
+  .addform input, .addform select { font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid #d8dee7; border-radius: 9px; outline: none; width: 100%; }
+  .addform button { justify-self: start; }
+
+  @media print {
+    body { background: #fff; }
+    .tools, .addform, .btn, #login { display: none !important; }
+    .card { box-shadow: none; border: 1px solid #e5e7eb; page-break-inside: avoid; }
+    .stats { grid-template-columns: repeat(4, 1fr); }
+    .stat { box-shadow: none; border: 1px solid #e5e7eb; }
+    .wrap { max-width: none; padding: 0; }
+    .person .del { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="box">
+    <h2>管理后台登录</h2>
+    <p>请输入管理员密码。密码在服务器 data 目录下的 admin-password.txt 中，或由部署时的环境变量 ADMIN_PASSWORD 指定。</p>
+    <input id="pwd" type="password" placeholder="管理员密码" autocomplete="current-password">
+    <button class="btn primary" onclick="login()">登录</button>
+    <div class="err" id="login-err"></div>
+  </div>
+</div>
+
+<div class="wrap" id="app">
+  <div class="topbar">
+    <div>
+      <h1>值班报名管理后台</h1>
+      <div class="sub" id="subtitle">2026年中秋、国庆值班报名</div>
+    </div>
+    <div class="tools">
+      <button class="btn" onclick="load()">刷新</button>
+      <button class="btn" onclick="location.href='/api/admin/export.csv'">导出 Excel</button>
+      <button class="btn" onclick="window.print()">打印 / 存为PDF</button>
+      <button class="btn danger" onclick="clearAll()">清空全部</button>
+      <button class="btn" onclick="logout()">退出登录</button>
+    </div>
+  </div>
+
+  <div class="flash" id="flash"></div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="card">
+    <div class="card-head"><h2>按日期统计（每天 3 人：中班 2 人、晚班 1 人）</h2></div>
+    <div id="byDate"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>按人员统计</h2><span class="muted">按报名班次数量从多到少排序</span></div>
+    <div id="byPerson"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>管理员代报名</h2><span class="muted">规则与员工自助报名一致</span></div>
+    <div class="addform">
+      <select id="a-date"></select>
+      <select id="a-shift"></select>
+      <input id="a-name" maxlength="20" placeholder="姓名">
+      <input id="a-dept" maxlength="30" placeholder="科室（选填）">
+      <input id="a-phone" maxlength="11" inputmode="numeric" placeholder="手机号">
+      <button class="btn primary" onclick="adminAdd()">添加</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var data = null;
+var flashTimer = null;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function flash(type, msg) {
+  var f = $('flash');
+  f.className = 'flash show ' + type;
+  f.textContent = msg;
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(function () { f.className = 'flash'; }, 6000);
+}
+
+async function api(url, body) {
+  var opt = { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' } };
+  if (body) opt.body = JSON.stringify(body);
+  var res = await fetch(url, opt);
+  var out = {};
+  try { out = await res.json(); } catch (e) { }
+  return { ok: res.ok, status: res.status, data: out };
+}
+
+function showLogin() { $('login').className = 'show'; $('app').className = ''; $('pwd').focus(); }
+
+async function login() {
+  var r = await api('/api/admin/login', { password: $('pwd').value });
+  if (r.ok && r.data.ok) {
+    $('login').className = '';
+    $('login-err').className = 'err';
+    $('pwd').value = '';
+    load();
+  } else {
+    $('login-err').textContent = r.data.message || '登录失败';
+    $('login-err').className = 'err show';
+  }
+}
+
+async function logout() {
+  await api('/api/admin/logout', {});
+  showLogin();
+}
+
+/* ============ 数据加载与渲染 ============ */
+
+async function load() {
+  var r = await api('/api/admin/board');
+  if (r.status === 401) { showLogin(); return; }
+  if (!r.ok) { flash('err', r.data.message || '加载失败'); return; }
+  data = r.data;
+  $('app').className = 'show';
+  $('subtitle').textContent = data.title;
+  document.title = data.title + ' · 管理后台';
+  renderDays();
+  renderPeople();
+  renderStats();
+  fillAddForm();
+}
+
+function renderStats() {
+  var cap = data.days.length * data.totalLimit;
+  var used = 0, fullDays = 0;
+  data.days.forEach(function (d) {
+    var c = data.board[d.date] || {};
+    used += c.total || 0;
+    if ((c.total || 0) >= data.totalLimit) fullDays++;
+  });
+  var people = {};
+  data.days.forEach(function (d) {
+    data.shifts.forEach(function (s) {
+      ((data.board[d.date] || {})[s.key] || []).forEach(function (p) { people[p.name] = 1; });
+    });
+  });
+  $('stats').innerHTML =
+    stat('报名总班次', used + ' / ' + cap) +
+    stat('剩余名额', String(cap - used), cap - used === 0 ? 'warn' : '') +
+    stat('已排满日期', fullDays + ' / ' + data.days.length) +
+    stat('参与人数', String(Object.keys(people).length));
+}
+
+function stat(k, v, cls) {
+  return '<div class="stat"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || '') + '">' + esc(v) + '</div></div>';
+}
+
+function renderDays() {
+  var html = '<table><thead><tr><th style="width:130px">日期</th>' +
+             data.shifts.map(function (s) { return '<th> ' + esc(s.key) + '（' + s.limit + ' 人）</th>'; }).join('') +
+             '<th style="width:110px">状态</th></tr></thead><tbody>';
+
+  data.groups.forEach(function (g) {
+    g.days.forEach(function (d) {
+      var cell = data.board[d.date] || {};
+      var used = cell.total || 0;
+      var full = used >= data.totalLimit;
+      html += '<tr class="' + (full ? 'full-row' : '') + '">';
+      html += '<td class="date">' + esc(g.name) + ' ' + esc(d.text) + '<span class="week">' + esc(d.week) + '</span>' +
+              (d.tag ? '<span class="tag">' + esc(d.tag) + '</span>' : '') + '</td>';
+      data.shifts.forEach(function (s) {
+        var list = cell[s.key] || [];
+        var inner = '';
+        for (var i = 0; i < s.limit; i++) {
+          if (list[i]) {
+            inner += '<span class="person">' + esc(list[i].name) +
+                     (list[i].dept ? ' <span class="muted">' + esc(list[i].dept) + '</span>' : '') +
+                     '<span class="del" title="删除该报名" onclick="delOne(' + list[i].id + ',\'' + esc(list[i].name) + '\')">×</span></span>';
+          } else {
+            inner += '<span class="person empty">空缺</span>';
+          }
+        }
+        html += '<td>' + inner + '</td>';
+      });
+      html += '<td>' + (full ? '<b style="color:#dc2626">已满</b>' : '<span class="muted">' + used + '/' + data.totalLimit + '</span>') + '</td>';
+      html += '</tr>';
+    });
+  });
+  html += '</tbody></table>';
+  $('byDate').innerHTML = html;
+}
+
+function renderPeople() {
+  var map = {};
+  data.days.forEach(function (d) {
+    data.shifts.forEach(function (s) {
+      ((data.board[d.date] || {})[s.key] || []).forEach(function (p) {
+        var m = map[p.name] || (map[p.name] = { name: p.name, dept: p.dept, phone: p.phone, shifts: {}, dates: [], total: 0 });
+        m.shifts[s.key] = (m.shifts[s.key] || 0) + 1;
+        m.dates.push(d.text + s.key);
+        m.total++;
+        if (!m.dept && p.dept) m.dept = p.dept;
+      });
+    });
+  });
+
+  var names = Object.keys(map).sort(function (a, b) {
+    return map[b].total - map[a].total || a.localeCompare(b, 'zh');
+  });
+
+  if (!names.length) { $('byPerson').innerHTML = '<div class="empty">还没有人报名</div>'; return; }
+
+  var html = '<table><thead><tr><th style="width:120px">姓名</th><th style="width:130px">科室</th><th style="width:140px">手机号</th>' +
+             data.shifts.map(function (s) { return '<th style="width:80px">' + esc(s.key) + '</th>'; }).join('') +
+             '<th style="width:70px">合计</th><th>值班日期</th></tr></thead><tbody>';
+  names.forEach(function (n) {
+    var m = map[n];
+    html += '<tr><td><b>' + esc(m.name) + '</b></td><td>' + esc(m.dept || '') + '</td><td>' + esc(m.phone || '') + '</td>' +
+            data.shifts.map(function (s) { return '<td class="num">' + (m.shifts[s.key] || 0) + '</td>'; }).join('') +
+            '<td class="num" style="color:#2563eb">' + m.total + '</td>' +
+            '<td class="muted">' + esc(m.dates.join('、')) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  $('byPerson').innerHTML = html;
+}
+
+function fillAddForm() {
+  if ($('a-date').options.length) return;
+  var opts = '';
+  data.groups.forEach(function (g) {
+    g.days.forEach(function (d) { opts += '<option value="' + d.date + '">' + esc(g.name + ' ' + d.text + ' ' + d.week) + '</option>'; });
+  });
+  $('a-date').innerHTML = opts;
+  $('a-shift').innerHTML = data.shifts.map(function (s) { return '<option value="' + esc(s.key) + '">' + esc(s.key) + '</option>'; }).join('');
+}
+
+/* ============ 操作 ============ */
+
+async function delOne(id, name) {
+  if (!confirm('确定删除 ' + name + ' 的这条报名吗？')) return;
+  var r = await api('/api/admin/delete', { id: id });
+  flash(r.ok ? 'ok' : 'err', r.data.message || (r.ok ? '已删除' : '删除失败'));
+  load();
+}
+
+async function adminAdd() {
+  var r = await api('/api/admin/add', {
+    date: $('a-date').value, shift: $('a-shift').value,
+    name: $('a-name').value.trim(), dept: $('a-dept').value.trim(), phone: $('a-phone').value.trim()
+  });
+  if (r.ok && r.data.ok) {
+    flash('ok', r.data.message);
+    $('a-name').value = ''; $('a-phone').value = '';
+    load();
+  } else {
+    flash('err', r.data.message || '添加失败');
+  }
+}
+
+async function clearAll() {
+  if (!confirm('将删除全部报名数据，且无法撤销。确定继续吗？')) return;
+  var word = prompt('请输入“清空”两个字以确认：');
+  if (word === null) return;
+  var r = await api('/api/admin/clear', { confirm: word });
+  flash(r.ok ? 'ok' : 'err', r.data.message || (r.ok ? '已清空' : '操作失败'));
+  load();
+}
+
+/* ============ 启动 ============ */
+
+$('pwd').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+services:
+  duty:
+    build: .
+    image: duty-2026
+    container_name: duty-2026
+    restart: always
+    # 默认只监听服务器本机，由 Nginx / Caddy 反向代理并配置 HTTPS。
+    # 没有域名、想先用 IP+端口直接访问，就改成 "3000:3000"。
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      TZ: Asia/Shanghai
+      PORT: "3000"
+      # 【必改】管理后台登录密码
+      ADMIN_PASSWORD: "请改成你自己的管理密码"
+      # 【可选】设置后，别人必须凭邀请码才能查看和报名；留空则不校验
+      ACCESS_CODE: ""
+      # 通过 Nginx/Caddy 反代时设为 1，用于记录访问者真实 IP
+      TRUST_PROXY: "1"
+    volumes:
+      # 数据保存在这里（SQLite 数据库文件），删容器不丢数据；备份就备份这个目录
+      - ./data:/app/data
