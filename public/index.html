@@ -123,9 +123,7 @@
   <div class="card">
     <div class="card-body">
       <div class="field"><label>姓名 <i>*</i></label><input id="name" maxlength="20" placeholder="请输入本人姓名" autocomplete="off"></div>
-      <div class="field"><label>科室</label><input id="dept" maxlength="30" placeholder="选填，如：办公室" autocomplete="off"></div>
-      <div class="field"><label>手机号 <i>*</i></label><input id="phone" maxlength="11" inputmode="numeric" placeholder="11 位手机号，用于核对与联系" autocomplete="off"></div>
-      <p class="hint">先填好以上信息，再点击下方日期对应的「报名」按钮。信息只保存在你自己的浏览器里。</p>
+      <p class="hint">填好姓名后，再点击下方日期对应的「报名」按钮。姓名只保存在你自己的浏览器里。</p>
     </div>
   </div>
 
@@ -208,20 +206,13 @@ function submitCode() {
   load();
 }
 
-function profile() {
-  return { name: $('name').value.trim(), dept: $('dept').value.trim(), phone: $('phone').value.trim() };
-}
-
-function remember() {
-  var p = profile();
-  LS.set('name', p.name); LS.set('dept', p.dept); LS.set('phone', p.phone);
-}
+function myName() { return $('name').value.trim(); }
 
 /* ============ 渲染 ============ */
 
 function render() {
   if (!board) return;
-  var me = profile().name;
+  var me = myName();
   var total = 0, capacity = 0, html = '';
 
   board.groups.forEach(function (g) {
@@ -280,12 +271,11 @@ async function load() {
 /* ============ 操作 ============ */
 
 async function signup(date, shift) {
-  var p = profile();
-  if (!p.name) { say('warn', '请先在上方填写姓名'); $('name').focus(); return; }
-  if (!/^1[3-9]\d{9}$/.test(p.phone)) { say('warn', '请填写正确的 11 位手机号'); $('phone').focus(); return; }
-  remember();
+  var name = myName();
+  if (!name) { say('warn', '请先在上方填写姓名'); $('name').focus(); return; }
+  LS.set('name', name);
 
-  var r = await api('/api/signup', { date: date, shift: shift, name: p.name, dept: p.dept, phone: p.phone });
+  var r = await api('/api/signup', { date: date, shift: shift, name: name });
   if (r.ok && r.data.ok) {
     say('ok', r.data.message + '，请按时到岗。');
     await load();
@@ -298,9 +288,10 @@ async function signup(date, shift) {
 }
 
 async function queryMine() {
-  var p = profile();
-  if (!p.name || !/^1[3-9]\d{9}$/.test(p.phone)) { say('warn', '查询需要填写姓名和报名时用的手机号'); return; }
-  var r = await api('/api/my', { name: p.name, phone: p.phone });
+  var name = myName();
+  if (!name) { say('warn', '查询前请先在上方填写姓名'); $('name').focus(); return; }
+  LS.set('name', name);
+  var r = await api('/api/my', { name: name });
   if (!r.ok) { say('err', r.data.message || '查询失败'); return; }
   var list = r.data.list || [];
   $('mine').className = 'card show';
@@ -313,9 +304,8 @@ async function queryMine() {
 }
 
 async function cancelMine(id) {
-  var p = profile();
   if (!confirm('确定取消这条报名吗？取消后名额会释放给其他人。')) return;
-  var r = await api('/api/cancel', { id: id, name: p.name, phone: p.phone });
+  var r = await api('/api/cancel', { id: id, name: myName() });
   if (r.ok && r.data.ok) { say('ok', r.data.message); await load(); queryMine(); }
   else say('err', r.data.message || '取消失败');
 }
@@ -323,11 +313,8 @@ async function cancelMine(id) {
 /* ============ 启动 ============ */
 
 $('name').value = LS.get('name');
-$('dept').value = LS.get('dept');
-$('phone').value = LS.get('phone');
-['name', 'dept', 'phone'].forEach(function (k) {
-  $(k).addEventListener('change', function () { remember(); render(); });
-});
+$('name').addEventListener('change', function () { LS.set('name', myName()); render(); });
+$('name').addEventListener('input', render);
 
 load();
 setInterval(function () { if ($('gate').className.indexOf('show') < 0) load(); }, 60000);

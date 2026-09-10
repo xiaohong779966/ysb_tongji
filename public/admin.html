@@ -132,8 +132,6 @@
       <select id="a-date"></select>
       <select id="a-shift"></select>
       <input id="a-name" maxlength="20" placeholder="姓名">
-      <input id="a-dept" maxlength="30" placeholder="科室（选填）">
-      <input id="a-phone" maxlength="11" inputmode="numeric" placeholder="手机号">
       <button class="btn primary" onclick="adminAdd()">添加</button>
     </div>
   </div>
@@ -247,7 +245,6 @@ function renderDays() {
         for (var i = 0; i < s.limit; i++) {
           if (list[i]) {
             inner += '<span class="person">' + esc(list[i].name) +
-                     (list[i].dept ? ' <span class="muted">' + esc(list[i].dept) + '</span>' : '') +
                      '<span class="del" title="删除该报名" onclick="delOne(' + list[i].id + ',\'' + esc(list[i].name) + '\')">×</span></span>';
           } else {
             inner += '<span class="person empty">空缺</span>';
@@ -268,11 +265,10 @@ function renderPeople() {
   data.days.forEach(function (d) {
     data.shifts.forEach(function (s) {
       ((data.board[d.date] || {})[s.key] || []).forEach(function (p) {
-        var m = map[p.name] || (map[p.name] = { name: p.name, dept: p.dept, phone: p.phone, shifts: {}, dates: [], total: 0 });
+        var m = map[p.name] || (map[p.name] = { name: p.name, shifts: {}, dates: [], total: 0 });
         m.shifts[s.key] = (m.shifts[s.key] || 0) + 1;
         m.dates.push(d.text + s.key);
         m.total++;
-        if (!m.dept && p.dept) m.dept = p.dept;
       });
     });
   });
@@ -283,12 +279,12 @@ function renderPeople() {
 
   if (!names.length) { $('byPerson').innerHTML = '<div class="empty">还没有人报名</div>'; return; }
 
-  var html = '<table><thead><tr><th style="width:120px">姓名</th><th style="width:130px">科室</th><th style="width:140px">手机号</th>' +
+  var html = '<table><thead><tr><th style="width:140px">姓名</th>' +
              data.shifts.map(function (s) { return '<th style="width:80px">' + esc(s.key) + '</th>'; }).join('') +
              '<th style="width:70px">合计</th><th>值班日期</th></tr></thead><tbody>';
   names.forEach(function (n) {
     var m = map[n];
-    html += '<tr><td><b>' + esc(m.name) + '</b></td><td>' + esc(m.dept || '') + '</td><td>' + esc(m.phone || '') + '</td>' +
+    html += '<tr><td><b>' + esc(m.name) + '</b></td>' +
             data.shifts.map(function (s) { return '<td class="num">' + (m.shifts[s.key] || 0) + '</td>'; }).join('') +
             '<td class="num" style="color:#2563eb">' + m.total + '</td>' +
             '<td class="muted">' + esc(m.dates.join('、')) + '</td></tr>';
@@ -319,11 +315,11 @@ async function delOne(id, name) {
 async function adminAdd() {
   var r = await api('/api/admin/add', {
     date: $('a-date').value, shift: $('a-shift').value,
-    name: $('a-name').value.trim(), dept: $('a-dept').value.trim(), phone: $('a-phone').value.trim()
+    name: $('a-name').value.trim()
   });
   if (r.ok && r.data.ok) {
     flash('ok', r.data.message);
-    $('a-name').value = ''; $('a-phone').value = '';
+    $('a-name').value = '';
     load();
   } else {
     flash('err', r.data.message || '添加失败');

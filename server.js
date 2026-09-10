@@ -77,26 +77,48 @@ db.exec(`
     date       TEXT NOT NULL,
     shift      TEXT NOT NULL,
     name       TEXT NOT NULL,
-    dept       TEXT NOT NULL DEFAULT '',
-    phone      TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     ip         TEXT NOT NULL DEFAULT ''
   );
+`);
+
+// 兼容早期带 dept / phone 字段的数据库：重建表，已有的报名记录全部保留
+const columns = db.prepare('PRAGMA table_info(signups)').all().map((c) => c.name);
+if (columns.indexOf('phone') >= 0 || columns.indexOf('dept') >= 0) {
+  db.exec(`
+    DROP INDEX IF EXISTS idx_signups_date_name;
+    DROP INDEX IF EXISTS idx_signups_date_shift;
+    ALTER TABLE signups RENAME TO signups_old;
+    CREATE TABLE signups (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      date       TEXT NOT NULL,
+      shift      TEXT NOT NULL,
+      name       TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      ip         TEXT NOT NULL DEFAULT ''
+    );
+    INSERT INTO signups (id, date, shift, name, created_at, ip)
+      SELECT id, date, shift, name, created_at, ip FROM signups_old;
+    DROP TABLE signups_old;
+  `);
+  console.log('[迁移] 已移除手机号/科室字段，原有报名记录已保留');
+}
+
+db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_signups_date_name ON signups(date, name);
   CREATE INDEX IF NOT EXISTS idx_signups_date_shift ON signups(date, shift);
 `);
 
 const stmt = {
-  insert: db.prepare('INSERT INTO signups (date, shift, name, dept, phone, created_at, ip) VALUES (?, ?, ?, ?, ?, ?, ?)'),
-  byDate: db.prepare('SELECT id, date, shift, name, dept, phone, created_at, ip FROM signups WHERE date = ? ORDER BY shift, id'),
-  all: db.prepare('SELECT id, date, shift, name, dept, phone, created_at, ip FROM signups ORDER BY date, shift, id'),
-  find: db.prepare('SELECT id, shift, phone FROM signups WHERE date = ? AND name = ?'),
+  insert: db.prepare('INSERT INTO signups (date, shift, name, created_at, ip) VALUES (?, ?, ?, ?, ?)'),
+  all: db.prepare('SELECT id, date, shift, name, created_at, ip FROM signups ORDER BY date, shift, id'),
+  find: db.prepare('SELECT id, shift FROM signups WHERE date = ? AND name = ?'),
   countDate: db.prepare('SELECT COUNT(*) AS n FROM signups WHERE date = ?'),
   countShift: db.prepare('SELECT COUNT(*) AS n FROM signups WHERE date = ? AND shift = ?'),
-  byId: db.prepare('SELECT id, date, shift, name, phone FROM signups WHERE id = ?'),
+  byId: db.prepare('SELECT id, date, shift, name FROM signups WHERE id = ?'),
   del: db.prepare('DELETE FROM signups WHERE id = ?'),
   delAll: db.prepare('DELETE FROM signups'),
-  mine: db.prepare('SELECT id, date, shift, name, dept FROM signups WHERE name = ? AND phone = ? ORDER BY date')
+  mine: db.prepare('SELECT id, date, shift, name FROM signups WHERE name = ? ORDER BY date')
 };
 
 /* ===================== 工具函数 ===================== */
@@ -105,8 +127,11 @@ function clean(v, max) {
   return String(v == null ? '' : v).trim().replace(/\s+/g, ' ').slice(0, max);
 }
 
-function validPhone(p) {
-  return /^1[3-9]\d{9}$/.test(p);
+// 姓名是报名唯一标识：去掉所有空白（避免“张 三”和“张三”被当成两个人）；
+// 超过 20 个字符返回 null，交给调用方报错，不做静默截断。
+function parseName(v) {
+  const n = String(v == null ? '' : v).replace(/\s+/g, '');
+  return n.length > 20 ? null : n;
 }
 
 function nowText() {
@@ -225,15 +250,12 @@ function readBody(req, limit) {
 function createSignup(input, ip) {
   const date = clean(input.date, 10);
   const shift = clean(input.shift, 10);
-  const name = clean(input.name, 20);
-  const dept = clean(input.dept, 30);
-  const phone = clean(input.phone, 20);
+  const name = parseName(input.name);
 
   if (!DAY_MAP.has(date)) return { ok: false, code: 'BAD_DATE', message: '报名日期不在本次值班安排范围内' };
   if (SHIFT_KEYS.indexOf(shift) < 0) return { ok: false, code: 'BAD_SHIFT', message: '请选择要报名的班次' };
+  if (name === null) return { ok: false, code: 'BAD_NAME', message: '姓名过长，请填写真实姓名' };
   if (!name) return { ok: false, code: 'BAD_NAME', message: '请填写姓名' };
-  if (name.length > 20) return { ok: false, code: 'BAD_NAME', message: '姓名过长' };
-  if (!validPhone(phone)) return { ok: false, code: 'BAD_PHONE', message: '请填写正确的 11 位手机号' };
 
   const shiftDef = SHIFTS.find((s) => s.key === shift);
 
@@ -258,7 +280,7 @@ function createSignup(input, ip) {
       return { ok: false, code: 'SHIFT_FULL', message: MSG.SHIFT_FULL };
     }
 
-    stmt.insert.run(date, shift, name, dept, phone, nowText(), ip || '');
+    stmt.insert.run(date, shift, name, nowText(), ip || '');
     db.exec('COMMIT');
     return { ok: true, message: '报名成功：' + DAY_MAP.get(date).text + ' ' + shift, day: DAY_MAP.get(date), shift };
   } catch (e) {
@@ -280,8 +302,8 @@ function buildBoard(includePersonal) {
   rows.forEach((r) => {
     if (!byDate[r.date]) return;
     const item = includePersonal
-      ? { id: r.id, name: r.name, dept: r.dept, phone: r.phone, at: r.created_at, ip: r.ip }
-      : { id: r.id, name: r.name, dept: r.dept };
+      ? { id: r.id, name: r.name, at: r.created_at, ip: r.ip }
+      : { id: r.id, name: r.name };
     byDate[r.date][r.shift].push(item);
     byDate[r.date].total++;
   });
@@ -294,11 +316,11 @@ function csvEscape(v) {
 
 function exportCsv() {
   const rows = stmt.all.all();
-  const head = ['节日', '日期', '星期', '班次', '姓名', '科室', '手机号', '报名时间'].map(csvEscape).join(',');
+  const head = ['节日', '日期', '星期', '班次', '姓名', '报名时间'].map(csvEscape).join(',');
   if (!rows.length) return '\ufeff' + head;
   const lines = rows.map((r) => {
     const d = DAY_MAP.get(r.date) || {};
-    return [d.group || '', d.text || r.date, d.week || '', r.shift, r.name, r.dept, r.phone, r.created_at].map(csvEscape).join(',');
+    return [d.group || '', d.text || r.date, d.week || '', r.shift, r.name, r.created_at].map(csvEscape).join(',');
   });
   return '\ufeff' + head + '\r\n' + lines.join('\r\n');
 }
@@ -359,25 +381,24 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && p === '/api/my') {
       if (rateLimited(ip, 'my', 60, 60 * 1000)) return fail(res, 429, '操作过于频繁，请稍后再试');
       const body = await readBody(req);
-      const name = clean(body.name, 20);
-      const phone = clean(body.phone, 20);
-      if (!name || !validPhone(phone)) return fail(res, 400, '请填写姓名和报名时使用的手机号');
-      const list = stmt.mine.all(name, phone).map((r) => {
+      const name = parseName(body.name);
+      if (name === null) return fail(res, 400, '姓名过长，请填写真实姓名');
+      if (!name) return fail(res, 400, '请填写姓名');
+      const list = stmt.mine.all(name).map((r) => {
         const d = DAY_MAP.get(r.date) || {};
         return { id: r.id, date: r.date, text: d.text || r.date, week: d.week || '', shift: r.shift };
       });
       return sendJson(res, 200, { ok: true, list });
     }
 
-    // 本人取消报名：姓名 + 手机号必须与报名时一致
+    // 取消报名：需要同时提供报名编号和姓名
     if (req.method === 'POST' && p === '/api/cancel') {
       if (rateLimited(ip, 'cancel', 30, 60 * 1000)) return fail(res, 429, '操作过于频繁，请稍后再试');
       const body = await readBody(req);
       const id = Number(body.id);
-      const name = clean(body.name, 20);
-      const phone = clean(body.phone, 20);
+      const name = parseName(body.name) || '';
       const row = stmt.byId.get(id);
-      if (!row || row.name !== name || row.phone !== phone) return fail(res, 403, '取消失败：姓名或手机号与报名时不一致');
+      if (!row || row.name !== name) return fail(res, 403, '取消失败：姓名与报名记录不一致');
       stmt.del.run(id);
       const d = DAY_MAP.get(row.date) || {};
       return sendJson(res, 200, { ok: true, message: '已取消 ' + (d.text || row.date) + ' 的' + row.shift + '报名' });
